@@ -1027,9 +1027,9 @@ footer {
     <div class="cta-box">
       <h2>Ready to unjank<br>your GitHub?</h2>
       <p>Free, open source, and works on any GitHub repo. No account, no permissions beyond github.com.</p>
-      <a href="https://github.com/TheDevMarcus/github_unjank/archive/refs/tags/V1.0.3.zip" class="btn-primary" style="margin: 0 auto; display: inline-flex;">
+      <a href="https://github.com/TheDevMarcus/github_unjank/archive/refs/tags/V1.0.4.zip" id="cta-download-btn" class="btn-primary" style="margin: 0 auto; display: inline-flex;">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M7.47 10.78a.75.75 0 0 0 1.06 0l3.75-3.75a.75.75 0 0 0-1.06-1.06L8.75 8.44V1.75a.75.75 0 0 0-1.5 0v6.69L4.78 5.97a.75.75 0 0 0-1.06 1.06l3.75 3.75ZM3.75 13a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z"/></svg>
-        Download Free — V1.0.3
+        Download Free — <span class="cta-version-label" style="font-family:var(--mono);font-size:12px;font-weight:700;">V1.0.4</span>
       </a>
       <div class="cta-version">Chrome · Edge · Brave · Any Chromium browser</div>
     </div>
@@ -1042,13 +1042,13 @@ footer {
   </div>
   <div class="footer-right">
     <a href="https://github.com/TheDevMarcus/github_unjank" target="_blank">GitHub</a>
-    <a href="https://github.com/TheDevMarcus/github_unjank/archive/refs/tags/V1.0.3.zip">Download</a>
+    <a href="https://github.com/TheDevMarcus/github_unjank/archive/refs/tags/V1.0.4.zip" id="footer-download-link">Download</a>
   </div>
 </footer>
 
 <script>
 (async () => {
-  const FALLBACK_VERSION = 'V1.0.3';
+  const FALLBACK_VERSION = 'V1.0.4';
   const REPO = 'TheDevMarcus/github_unjank';
 
   let version = FALLBACK_VERSION;
@@ -1067,13 +1067,23 @@ footer {
     el.textContent = version;
   });
 
-  document.querySelectorAll('.btn-version-label').forEach(el => {
+  document.querySelectorAll('.btn-version-label, .cta-version-label').forEach(el => {
     el.textContent = version;
   });
 
   const heroBtn = document.getElementById('hero-download-btn');
   if (heroBtn) {
     heroBtn.href = `https://github.com/${REPO}/archive/refs/tags/${version}.zip`;
+  }
+
+  const ctaBtn = document.getElementById('cta-download-btn');
+  if (ctaBtn) {
+    ctaBtn.href = `https://github.com/${REPO}/archive/refs/tags/${version}.zip`;
+  }
+
+  const footerDl = document.getElementById('footer-download-link');
+  if (footerDl) {
+    footerDl.href = `https://github.com/${REPO}/archive/refs/tags/${version}.zip`;
   }
 })();
 </script>
