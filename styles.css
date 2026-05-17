@@ -360,7 +360,6 @@
 #gpt-toast.gpt-toast-warn { background: #9a6700; }
 @media (prefers-color-scheme: dark) { #gpt-toast { background: #e6edf3; color: #1f2328; } #gpt-toast.gpt-toast-warn { background: #d29922; color: #1f2328; } }
 
-/* ── Heatmap ── */
 .gpt-heatmap-section {
   padding: 12px 14px 14px;
   border-top: 1px solid var(--color-border-muted, #d0d7de);
@@ -385,7 +384,6 @@
 }
 .gpt-hm-day { text-anchor: end; }
 
-/* Cell levels — light mode */
 .gpt-hm-cell { cursor: pointer; }
 .gpt-hm-lv0 { fill: var(--color-neutral-muted, #ebedf0); }
 .gpt-hm-lv1 { fill: #9be9a8; }
@@ -393,7 +391,6 @@
 .gpt-hm-lv3 { fill: #30a14e; }
 .gpt-hm-lv4 { fill: #216e39; }
 
-/* Cell levels — dark mode */
 @media (prefers-color-scheme: dark) {
   .gpt-hm-lv0 { fill: #161b22; stroke: #21262d; stroke-width: 1; }
   .gpt-hm-lv1 { fill: #0e4429; }
@@ -404,7 +401,6 @@
 
 .gpt-hm-cell:hover { opacity: 0.8; }
 
-/* Tooltip */
 .gpt-hm-tip {
   position: absolute; pointer-events: none;
   background: #1f2328; color: #e6edf3;
@@ -415,7 +411,6 @@
 }
 @media (prefers-color-scheme: dark) { .gpt-hm-tip { background: #e6edf3; color: #1f2328; } }
 
-/* Legend */
 .gpt-hm-legend {
   display: flex; align-items: center; gap: 3px;
   margin-top: 6px; justify-content: flex-end;
@@ -425,7 +420,6 @@
   width: 10px; height: 10px; border-radius: 2px;
 }
 
-/* Loading spinner */
 .gpt-hm-spinner-wrap {
   display: flex; align-items: center; gap: 8px;
   padding: 12px 0; color: var(--color-fg-muted, #636c76);
@@ -439,7 +433,6 @@
 }
 @keyframes gptSpin { to { transform: rotate(360deg); } }
 
-/* Error */
 .gpt-hm-error {
   font-size: 12px; color: var(--color-fg-muted, #636c76);
   padding: 10px 0;
