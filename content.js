@@ -1,13 +1,13 @@
 (function () {
   'use strict';
 
-  let selectedFiles = new Set();
+  let selectedItems = new Map();
   let selectionMode = false;
   let hiddenElements = [];
 
   function isRepoRoot() {
     const parts = location.pathname.split('/').filter(Boolean);
-    
+
     if (parts.length === 2) return true;
     const treeMatch = location.pathname.match(/\/[^/]+\/[^/]+\/tree\/[^/]+\/?$/);
     return !!treeMatch;
@@ -92,6 +92,7 @@
     close:    '<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/></svg>',
     edit:     '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Z"/></svg>',
     file:     '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914Z"/></svg>',
+    folder:   '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z"/></svg>',
     history:  '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/></svg>',
     raw:      '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4.72 3.22a.75.75 0 0 1 1.06 1.06L2.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25Zm6.56 0a.75.75 0 1 0-1.06 1.06L13.94 8l-3.72 3.72a.75.75 0 1 0 1.06 1.06l4.25-4.25a.75.75 0 0 0 0-1.06l-4.25-4.25Z"/></svg>',
     blame:    '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/></svg>',
@@ -124,10 +125,10 @@
   }
 
   function findMoreFileActionsButton() {
-    
+
     const kebab = document.querySelector('button .octicon-kebab-horizontal, button svg.octicon-kebab-horizontal');
     if (kebab) return kebab.closest('button');
-    
+
     const selectors = [
       'button[aria-label="More file actions"]',
       '[data-testid="more-file-actions-button"]',
@@ -229,7 +230,7 @@
 
   function toggleSelectMode() {
     selectionMode = !selectionMode;
-    selectedFiles.clear();
+    selectedItems.clear();
     updateCount();
 
     const btnSelect  = document.getElementById('gpt-btn-select');
@@ -260,6 +261,8 @@
       if (row.querySelector('.gpt-cb')) return;
       const name = getFileNameFromRow(row);
       if (!name) return;
+      const path = getFilePathFromRow(row) || name;
+      const dir = isDirectory(row);
 
       const wrap = document.createElement('div');
       wrap.className = 'gpt-cb';
@@ -277,12 +280,12 @@
           wrap.setAttribute('aria-checked', 'false');
           wrap.classList.remove('gpt-cb-on');
           row.classList.remove('gpt-row-sel');
-          selectedFiles.delete(name);
+          selectedItems.delete(name);
         } else {
           wrap.setAttribute('aria-checked', 'true');
           wrap.classList.add('gpt-cb-on');
           row.classList.add('gpt-row-sel');
-          selectedFiles.add(name);
+          selectedItems.set(name, { path, isDir: dir });
         }
         updateCount();
       };
@@ -292,10 +295,9 @@
 
       const lastCell = row.querySelector('td:last-child') || row;
 
-      
       const cellWrapper = document.createElement('div');
       cellWrapper.className = 'gpt-cell-wrap';
-      
+
       while (lastCell.firstChild) {
         cellWrapper.appendChild(lastCell.firstChild);
       }
@@ -308,7 +310,7 @@
 
   function removeCheckboxes() {
     document.querySelectorAll('.gpt-cb').forEach(el => el.remove());
-    
+
     document.querySelectorAll('.gpt-cell-wrap').forEach(wrapper => {
       const parent = wrapper.parentNode;
       if (parent) {
@@ -320,7 +322,7 @@
     });
     document.querySelectorAll('.gpt-row-sel').forEach(el => el.classList.remove('gpt-row-sel'));
     document.querySelectorAll('.gpt-row-selectable').forEach(el => el.classList.remove('gpt-row-selectable'));
-    selectedFiles.clear();
+    selectedItems.clear();
     updateCount();
   }
 
@@ -332,11 +334,11 @@
         cb.setAttribute('aria-checked', 'true');
         cb.classList.add('gpt-cb-on');
         row.classList.add('gpt-row-sel');
-        selectedFiles.add(name);
+        selectedItems.set(name, { path: getFilePathFromRow(row) || name, isDir: isDirectory(row) });
       }
     });
     updateCount();
-    showToast(selectedFiles.size + ' files selected');
+    showToast(selectedItems.size + ' items selected');
   }
 
   function deselectAll() {
@@ -345,55 +347,164 @@
       if (cb) { cb.setAttribute('aria-checked', 'false'); cb.classList.remove('gpt-cb-on'); }
       row.classList.remove('gpt-row-sel');
     });
-    selectedFiles.clear();
+    selectedItems.clear();
     updateCount();
   }
 
   function updateCount() {
     const el = document.getElementById('gpt-sel-count');
-    if (el) el.textContent = selectedFiles.size;
+    if (el) el.textContent = selectedItems.size;
   }
 
   function deleteSelected() {
-    if (!selectedFiles.size) { showToast('No files selected', 'warn'); return; }
-    showDeleteModal([...selectedFiles]);
+    if (!selectedItems.size) { showToast('No items selected', 'warn'); return; }
+    showDeleteModal([...selectedItems.values()]);
   }
 
-  function showDeleteModal(files) {
+  function showDeleteModal(items) {
+    getStorageSettings(settings => {
+      const apiMode = !!(settings.unjank_api_mode && settings.unjank_api_key);
+      _showDeleteModalUI(items, apiMode, settings.unjank_api_key || '');
+    });
+  }
+
+  function _showDeleteModalUI(items, apiMode, token) {
     document.getElementById('gpt-modal')?.remove();
     const overlay = document.createElement('div');
     overlay.id = 'gpt-modal';
+
+    const count = items.length;
+    const actionLabel = apiMode
+      ? 'Delete ' + count + ' item' + (count !== 1 ? 's' : '') + ' via API'
+      : 'Open ' + count + ' delete tab' + (count !== 1 ? 's' : '');
+    const subText = apiMode
+      ? 'Items will be permanently deleted using the GitHub API. Folders are deleted recursively. This cannot be undone.'
+      : 'Each file opens a GitHub delete confirmation tab. Folders cannot be deleted this way — enable API key mode for folder deletion.';
+
     overlay.innerHTML =
       '<div class="gpt-modal-box" role="dialog" aria-modal="true" aria-labelledby="gpt-modal-title">' +
         '<div class="gpt-modal-hd">' +
           '<div class="gpt-modal-hd-left">' + ICONS.trash +
-            '<h3 id="gpt-modal-title">Delete ' + files.length + ' file' + (files.length !== 1 ? 's' : '') + '?</h3>' +
+            '<h3 id="gpt-modal-title">Delete ' + count + ' item' + (count !== 1 ? 's' : '') + '?</h3>' +
           '</div>' +
           '<button class="gpt-icon-btn" id="gpt-modal-x" aria-label="Close">' + ICONS.close + '</button>' +
         '</div>' +
-        '<p class="gpt-modal-sub">Each file opens a GitHub delete confirmation tab.</p>' +
-        '<ul class="gpt-modal-list">' + files.map(f => '<li class="gpt-modal-file-item">' + ICONS.file + '<code>' + f + '</code></li>').join('') + '</ul>' +
+        '<p class="gpt-modal-sub">' + subText + '</p>' +
+        '<ul class="gpt-modal-list">' + items.map(it => '<li class="gpt-modal-file-item">' + (it.isDir ? ICONS.folder : ICONS.file) + '<code>' + it.path + '</code></li>').join('') + '</ul>' +
         '<div class="gpt-modal-footer">' +
           '<button id="gpt-modal-cancel" class="gpt-btn" type="button">Cancel</button>' +
-          '<button id="gpt-modal-go" class="gpt-btn gpt-btn-danger" type="button">' + ICONS.trash + ' Open ' + files.length + ' delete tab' + (files.length !== 1 ? 's' : '') + '</button>' +
+          '<button id="gpt-modal-go" class="gpt-btn gpt-btn-danger" type="button">' + ICONS.trash + ' ' + actionLabel + '</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(overlay);
     document.getElementById('gpt-modal-x').onclick = () => overlay.remove();
     document.getElementById('gpt-modal-cancel').onclick = () => overlay.remove();
-    document.getElementById('gpt-modal-go').onclick = () => { overlay.remove(); openDeletePages(files); };
+    document.getElementById('gpt-modal-go').onclick = () => {
+      overlay.remove();
+      if (apiMode) {
+        deleteViaApi(items, token);
+      } else {
+        openDeletePages(items);
+      }
+    };
     overlay.addEventListener('click', e => e.target === overlay && overlay.remove());
     document.getElementById('gpt-modal-go').focus();
   }
 
-  function openDeletePages(files) {
+  function openDeletePages(items) {
     const { owner, repo } = getRepoInfo();
     const branch = getBranch();
-    const prefix = getCurrentPath() ? getCurrentPath() + '/' : '';
-    files.forEach((name, i) => setTimeout(() =>
-      window.open('https://github.com/' + owner + '/' + repo + '/delete/' + branch + '/' + prefix + name, '_blank'), i * 350));
+    const files = items.filter(it => !it.isDir);
+    const dirs = items.filter(it => it.isDir);
+    if (dirs.length) showToast(dirs.length + ' folder' + (dirs.length !== 1 ? 's' : '') + ' skipped — enable API key mode to delete folders', 'warn');
+    files.forEach((it, i) => setTimeout(() =>
+      window.open('https://github.com/' + owner + '/' + repo + '/delete/' + branch + '/' + encodePath(it.path), '_blank'), i * 350));
     toggleSelectMode();
-    showToast('Opening ' + files.length + ' delete tab' + (files.length !== 1 ? 's' : '') + '…');
+    if (files.length) showToast('Opening ' + files.length + ' delete tab' + (files.length !== 1 ? 's' : '') + '…');
+  }
+
+  function getStorageSettings(cb) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['unjank_api_mode', 'unjank_api_key'], cb);
+    } else {
+      cb({});
+    }
+  }
+
+  async function apiListDir(owner, repo, dirPath, branch, token) {
+    const res = await fetch(
+      'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' +
+      dirPath.split('/').map(encodeURIComponent).join('/') + '?ref=' + encodeURIComponent(branch),
+      { headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github+json' } }
+    );
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || 'HTTP ' + res.status); }
+    return await res.json();
+  }
+
+  async function apiDeleteSingleFile(owner, repo, filePath, branch, token) {
+    const metaRes = await fetch(
+      'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' +
+      filePath.split('/').map(encodeURIComponent).join('/') + '?ref=' + encodeURIComponent(branch),
+      { headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github+json' } }
+    );
+    if (!metaRes.ok) { const e = await metaRes.json().catch(() => ({})); throw new Error(e.message || 'HTTP ' + metaRes.status); }
+    const meta = await metaRes.json();
+    if (Array.isArray(meta)) throw new Error('Expected file but got directory');
+    const delRes = await fetch(
+      'https://api.github.com/repos/' + owner + '/' + repo + '/contents/' +
+      filePath.split('/').map(encodeURIComponent).join('/'),
+      {
+        method: 'DELETE',
+        headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Delete ' + filePath, sha: meta.sha, branch }),
+      }
+    );
+    if (!delRes.ok) { const e = await delRes.json().catch(() => ({})); throw new Error(e.message || 'HTTP ' + delRes.status); }
+  }
+
+  async function apiDeleteRecursive(owner, repo, path, branch, token, onProgress) {
+    const entries = await apiListDir(owner, repo, path, branch, token);
+    for (const entry of entries) {
+      if (entry.type === 'dir') {
+        await apiDeleteRecursive(owner, repo, entry.path, branch, token, onProgress);
+      } else {
+        await apiDeleteSingleFile(owner, repo, entry.path, branch, token);
+        if (onProgress) onProgress(entry.path);
+      }
+    }
+  }
+
+  async function deleteViaApi(items, token) {
+    const { owner, repo } = getRepoInfo();
+    const branch = getBranch();
+    let done = 0, failed = [];
+
+    showToast('Deleting ' + items.length + ' item' + (items.length !== 1 ? 's' : '') + '…');
+
+    for (const item of items) {
+      try {
+        if (item.isDir) {
+          await apiDeleteRecursive(owner, repo, item.path, branch, token, () => { done++; });
+        } else {
+          await apiDeleteSingleFile(owner, repo, item.path, branch, token);
+          done++;
+        }
+      } catch (e) {
+        failed.push(item.path + ': ' + e.message);
+      }
+    }
+
+    toggleSelectMode();
+
+    if (failed.length === 0) {
+      showToast('Deleted ' + done + ' file' + (done !== 1 ? 's' : ''));
+    } else if (done === 0) {
+      showToast('Delete failed: ' + failed[0], 'warn');
+    } else {
+      showToast(done + ' deleted, ' + failed.length + ' failed', 'warn');
+    }
+
+    if (done > 0) setTimeout(() => location.reload(), 800);
   }
 
   function copyFilePaths() {
@@ -410,9 +521,6 @@
       });
   }
 
-  
-  
-  
   function childOf(el, targetParent) {
     let node = el;
     while (node && node.parentElement) {
@@ -422,8 +530,6 @@
     return null;
   }
 
-  
-  
   function findColumnLayout() {
     const rows = getFileRows();
     if (!rows.length) return null;
@@ -433,7 +539,7 @@
     while (el && el.parentElement && depth < 8) {
       depth++;
       const parent = el.parentElement;
-      
+
       if (parent.matches('main,body,[role="main"],[id="repo-content-pjax-container"]')) break;
       const siblings = Array.from(parent.children);
 
@@ -452,12 +558,12 @@
   }
 
   async function fetchCommitActivity(owner, repo) {
-    
+
     const url = 'https://api.github.com/repos/' + owner + '/' + repo + '/stats/commit_activity';
     for (let attempt = 0; attempt < 3; attempt++) {
       const res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
       if (res.status === 202) {
-        
+
         await new Promise(r => setTimeout(r, 1500));
         continue;
       }
@@ -471,11 +577,9 @@
     const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-    
     const allVals = weeks.flatMap(w => w.days);
     const max = Math.max(...allVals, 1);
 
-    
     function level(v) {
       if (v === 0) return 0;
       if (v <= max * 0.15) return 1;
@@ -484,7 +588,6 @@
       return 4;
     }
 
-    
     const monthLabels = [];
     let lastMonth = -1;
     weeks.forEach((w, wi) => {
@@ -495,7 +598,6 @@
 
     const totalCommits = weeks.reduce((s, w) => s + w.total, 0);
 
-    
     const cellSize = 11, gap = 2, step = cellSize + gap;
     const labelH = 18, labelW = 28;
     const cols = weeks.length, rows2 = 7;
@@ -607,25 +709,21 @@
         '<div class="gpt-hm-spinner-wrap"><div class="gpt-hm-spinner"></div><span>Loading commit history…</span></div>' +
       '</div>';
 
-    
-    
-    
     const layout = findColumnLayout();
     if (layout) {
       layout.readmeBlock.insertAdjacentElement('beforebegin', panel);
     } else if (rows.length) {
-      
+
       const lastRow = rows[rows.length - 1];
       let tableEl = lastRow.parentElement;
       if (tableEl && tableEl.tagName === 'TBODY') tableEl = tableEl.parentElement;
       if (tableEl) tableEl.insertAdjacentElement('afterend', panel);
     } else {
-      
+
       const group = document.getElementById('gpt-btn-group');
       if (group?.parentElement) group.parentElement.insertAdjacentElement('afterend', panel);
     }
 
-    
     const { owner, repo } = getRepoInfo();
     fetchCommitActivity(owner, repo).then(weeks => {
       const heatmapSection = panel.querySelector('.gpt-heatmap-section');
@@ -700,8 +798,25 @@
     });
     group.appendChild(copyBtn);
 
-    const deleteBtn = mkLink('Delete', 'trash', 'https://github.com/' + owner + '/' + repo + '/delete/' + branch + '/' + ep);
-    deleteBtn.className = 'gpt-btn gpt-btn-danger';
+    const deleteBtn = mkBtnEl('Delete', 'trash', 'gpt-btn-danger');
+    deleteBtn.addEventListener('click', () => {
+      const ep2 = encodePath(filePath);
+      getStorageSettings(settings => {
+        if (settings.unjank_api_mode && settings.unjank_api_key) {
+
+          const fileName = filePath.split('/').pop();
+          if (!confirm('Delete "' + fileName + '" via GitHub API?\n\nThis cannot be undone.')) return;
+          const { owner: o2, repo: r2 } = getRepoInfo();
+          const br2 = getBranch();
+          showToast('Deleting…');
+          apiDeleteSingleFile(o2, r2, filePath, br2, settings.unjank_api_key)
+            .then(() => { showToast('Deleted ' + fileName); setTimeout(() => history.back(), 900); })
+            .catch(e => showToast('Delete failed: ' + e.message, 'warn'));
+        } else {
+          window.location.href = 'https://github.com/' + owner + '/' + repo + '/delete/' + branch + '/' + ep2;
+        }
+      });
+    });
     group.appendChild(deleteBtn);
 
     wrapper.appendChild(group);
@@ -734,7 +849,7 @@
   function reset() {
     if (selectionMode) restoreSelectModeOthers();
     selectionMode = false;
-    selectedFiles.clear();
+    selectedItems.clear();
     hiddenElements = [];
     ['gpt-btn-group','gpt-stats-panel','gpt-toast','gpt-modal','gpt-blob-wrapper'].forEach(id =>
       document.getElementById(id)?.remove());
@@ -762,30 +877,18 @@
     }
   }
 
-  
-  
-  
   function findDeleteInput() {
-    
     const byClass = document.querySelector('input.js-repo-delete-proceed-confirmation');
     if (byClass) return byClass;
-
-    
-    
-    const explicit = [
-      '#verification_field',
-      'input[data-testid="repo-delete-proceed-button-text-input"]',
-      'input[data-testid="text-input-component"]',
-    ];
-    for (const s of explicit) {
-      const el = document.querySelector(s);
-      if (el) return el;
+    const byTestId = document.querySelector('input[data-testid="repo-delete-proceed-button-text-input"]');
+    if (byTestId) return byTestId;
+    const dialogs = document.querySelectorAll('dialog,[role="dialog"],[class*="modal"],[class*="Modal"],[class*="Dialog"],[class*="Overlay"]');
+    for (const dlg of dialogs) {
+      if (/delete\s+(this\s+)?repositor/i.test(dlg.textContent)) {
+        const inp = dlg.querySelector('input[type="text"],input:not([type])');
+        if (inp) return inp;
+      }
     }
-
-    
-    const byName = document.querySelector('input[name="verification_field"]');
-    if (byName) return byName;
-
     return null;
   }
 
@@ -794,7 +897,6 @@
     const input = findDeleteInput();
     if (!input) return;
 
-    
     const dialog = input.closest('dialog,[role="dialog"],[class*="modal"],[class*="Modal"],[class*="Dialog"],[class*="Overlay"]') || document.body;
     const quoted = dialog.textContent.match(/[“"]([\w.\-]+\/[\w.\-]+)[”"]/);
     const expectedText = quoted
@@ -831,7 +933,16 @@
     const ICON_FILL = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Z"/></svg>';
     const ICON_CHECK = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>';
 
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+
+    function reactSetValue(el, val) {
+
+      const tracker = el._valueTracker;
+      if (tracker) tracker.setValue(el.value);
+      nativeSetter.call(el, val);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 
     const setFilled = () => {
       btn.innerHTML = ICON_CHECK + 'Unfill';
@@ -861,62 +972,249 @@
       if (!btn._filled) { btn.style.background='#21262d'; btn.style.borderColor='rgba(240,246,252,.15)'; }
     });
 
+    const findSubmitBtn = () => input.closest('form,dialog,[role="dialog"],[class*="Box"],[class*="modal"],[class*="Modal"]')
+      ?.querySelector('button[type="submit"],input[type="submit"],button.btn-danger,button[data-testid*="delete"],button[data-testid*="proceed"]');
+
     btn.addEventListener('click', () => {
       if (btn._filled) {
-        setter.call(input, '');
-        ['input','change','keyup','keydown'].forEach(ev => input.dispatchEvent(new Event(ev, { bubbles: true })));
+        reactSetValue(input, '');
+
+        const sb = findSubmitBtn();
+        if (sb) sb.disabled = true;
         input.focus();
         setEmpty();
       } else {
-        setter.call(input, expectedText);
-        ['input','change','keyup','keydown'].forEach(ev => input.dispatchEvent(new Event(ev, { bubbles: true })));
+        reactSetValue(input, expectedText);
+
+        const sb = findSubmitBtn();
+        if (sb) {
+          sb.disabled = false;
+          sb.removeAttribute('disabled');
+          sb.setAttribute('aria-disabled', 'false');
+        }
         input.focus();
         setFilled();
       }
     });
 
+    const ICON_BOLT = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M9.504.43a1.516 1.516 0 0 1 .396 1.544L8.57 6h4.43a1.516 1.516 0 0 1 1.06 2.59l-6 6a1.516 1.516 0 0 1-2.516-1.427L6.835 9H2a1.516 1.516 0 0 1-1.06-2.59l7-7a1.516 1.516 0 0 1 1.564-.98Z"/></svg>';
+
+    const instantBtn = document.createElement('button');
+    instantBtn.type = 'button';
+    instantBtn.style.cssText = [
+      'display:flex','align-items:center','justify-content:center','gap:6px',
+      'width:100%','padding:7px 16px',
+      'font-size:14px','font-weight:600','cursor:pointer','border-radius:6px',
+      'border:1px solid #b91c1c','background:rgba(185,28,28,.15)','color:#f87171',
+      'line-height:20px','font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+      'transition:background .12s,border-color .12s','box-sizing:border-box',
+    ].join(';');
+    instantBtn.innerHTML = ICON_BOLT + 'Delete — no pop-up';
+
+    instantBtn.addEventListener('mouseenter', () => {
+      instantBtn.style.background = 'rgba(185,28,28,.35)';
+      instantBtn.style.borderColor = '#ef4444';
+    });
+    instantBtn.addEventListener('mouseleave', () => {
+      instantBtn.style.background = 'rgba(185,28,28,.15)';
+      instantBtn.style.borderColor = '#b91c1c';
+    });
+
+    instantBtn.addEventListener('click', () => {
+
+      reactSetValue(input, expectedText);
+      setFilled();
+
+      const sb = findSubmitBtn();
+      if (sb) {
+        sb.disabled = false;
+        sb.removeAttribute('disabled');
+        sb.setAttribute('aria-disabled', 'false');
+
+        setTimeout(() => sb.click(), 50);
+      }
+    });
+
     wrap.appendChild(btn);
+    wrap.appendChild(instantBtn);
     wrap.appendChild(hint);
 
-    
-    
-    const submitBtn = input.closest('form,dialog,[role="dialog"],[class*="Box"],[class*="modal"],[class*="Modal"]')
-      ?.querySelector('button[type="submit"],input[type="submit"],button.btn-danger,button[data-testid*="delete"],button[data-testid*="proceed"]');
-    const anchor = submitBtn || input;
+    const anchor = findSubmitBtn() || input;
     anchor.insertAdjacentElement('afterend', wrap);
   }
 
-  
+  function findArchiveInput() {
+    const byClass = document.querySelector('input.js-repo-archive-proceed-confirmation');
+    if (byClass) return byClass;
+    const byTestId = document.querySelector('input[data-testid="repo-archive-proceed-button-text-input"]');
+    if (byTestId) return byTestId;
+    const dialogs = document.querySelectorAll('dialog,[role="dialog"],[class*="modal"],[class*="Modal"],[class*="Dialog"],[class*="Overlay"]');
+    for (const dlg of dialogs) {
+      if (/archive\s+(this\s+)?repositor/i.test(dlg.textContent)) {
+        const inp = dlg.querySelector('input[type="text"],input:not([type])');
+        if (inp) return inp;
+      }
+    }
+    return null;
+  }
+
+  function injectArchiveAutofill() {
+    if (document.getElementById('gpt-archive-wrap')) return;
+    const input = findArchiveInput();
+    if (!input) return;
+
+    const dialog = input.closest('dialog,[role="dialog"],[class*="modal"],[class*="Modal"],[class*="Dialog"],[class*="Overlay"]') || document.body;
+    const quoted = dialog.textContent.match(/["“‘]([\w.\-]+\/[\w.\-]+)["”’]/);
+    const expectedText = quoted
+      ? quoted[1]
+      : (() => { const p = location.pathname.split('/').filter(Boolean); return p[0] + '/' + p[1]; })();
+
+    if (!expectedText || !expectedText.includes('/')) return;
+
+    const wrap = document.createElement('div');
+    wrap.id = 'gpt-archive-wrap';
+    wrap.style.cssText = 'margin-top:8px;display:flex;flex-direction:column;gap:6px;width:100%;';
+
+    const btnStyle = [
+      'display:flex','align-items:center','justify-content:center','gap:6px',
+      'width:100%','padding:7px 16px',
+      'font-size:14px','font-weight:600','cursor:pointer','border-radius:6px',
+      'line-height:20px','font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+      'transition:background .12s,border-color .12s','box-sizing:border-box',
+    ].join(';');
+
+    const ICON_FILL = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Z"/></svg>';
+    const ICON_CHECK = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>';
+    const ICON_BOLT = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M9.504.43a1.516 1.516 0 0 1 .396 1.544L8.57 6h4.43a1.516 1.516 0 0 1 1.06 2.59l-6 6a1.516 1.516 0 0 1-2.516-1.427L6.835 9H2a1.516 1.516 0 0 1-1.06-2.59l7-7a1.516 1.516 0 0 1 1.564-.98Z"/></svg>';
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    function reactSetValue(el, val) {
+      const tracker = el._valueTracker;
+      if (tracker) tracker.setValue(el.value);
+      nativeSetter.call(el, val);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    const findSubmitBtn = () => input.closest('form,dialog,[role="dialog"],[class*="Box"],[class*="modal"],[class*="Modal"]')
+      ?.querySelector('button[type="submit"],input[type="submit"],button.btn-danger,button[data-testid*="archive"],button[data-testid*="proceed"]');
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.style.cssText = btnStyle + ';border:1px solid rgba(240,246,252,.15);background:#21262d;color:#e6edf3;';
+    btn.innerHTML = ICON_FILL + 'Auto-fill';
+
+    const setFilled = () => {
+      btn.innerHTML = ICON_CHECK + 'Unfill';
+      btn.style.background = 'rgba(46,160,67,.15)';
+      btn.style.borderColor = '#238636';
+      btn.style.color = '#3fb950';
+      btn._filled = true;
+    };
+    const setEmpty = () => {
+      btn.innerHTML = ICON_FILL + 'Auto-fill';
+      btn.style.background = '#21262d';
+      btn.style.borderColor = 'rgba(240,246,252,.15)';
+      btn.style.color = '#e6edf3';
+      btn._filled = false;
+    };
+
+    input.addEventListener('input', () => {
+      if (input.value === expectedText) setFilled(); else setEmpty();
+    });
+
+    btn.addEventListener('mouseenter', () => {
+      if (!btn._filled) { btn.style.background='#30363d'; btn.style.borderColor='#8b949e'; }
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (!btn._filled) { btn.style.background='#21262d'; btn.style.borderColor='rgba(240,246,252,.15)'; }
+    });
+
+    btn.addEventListener('click', () => {
+      if (btn._filled) {
+        reactSetValue(input, '');
+        const sb = findSubmitBtn();
+        if (sb) sb.disabled = true;
+        input.focus();
+        setEmpty();
+      } else {
+        reactSetValue(input, expectedText);
+        const sb = findSubmitBtn();
+        if (sb) {
+          sb.disabled = false;
+          sb.removeAttribute('disabled');
+          sb.setAttribute('aria-disabled', 'false');
+        }
+        input.focus();
+        setFilled();
+      }
+    });
+
+    const instantBtn = document.createElement('button');
+    instantBtn.type = 'button';
+    instantBtn.style.cssText = btnStyle + ';border:1px solid #92400e;background:rgba(146,64,14,.15);color:#fbbf24;';
+    instantBtn.innerHTML = ICON_BOLT + 'Archive — no pop-up';
+
+    instantBtn.addEventListener('mouseenter', () => {
+      instantBtn.style.background = 'rgba(146,64,14,.35)';
+      instantBtn.style.borderColor = '#f59e0b';
+    });
+    instantBtn.addEventListener('mouseleave', () => {
+      instantBtn.style.background = 'rgba(146,64,14,.15)';
+      instantBtn.style.borderColor = '#92400e';
+    });
+
+    instantBtn.addEventListener('click', () => {
+      reactSetValue(input, expectedText);
+      setFilled();
+      const sb = findSubmitBtn();
+      if (sb) {
+        sb.disabled = false;
+        sb.removeAttribute('disabled');
+        sb.setAttribute('aria-disabled', 'false');
+        setTimeout(() => sb.click(), 50);
+      }
+    });
+
+    const hint = document.createElement('span');
+    hint.textContent = '“' + expectedText + '”';
+    hint.style.cssText = 'font-size:11px;color:#8b949e;font-family:ui-monospace,monospace;word-break:break-all;text-align:center;';
+
+    wrap.appendChild(btn);
+    wrap.appendChild(instantBtn);
+    wrap.appendChild(hint);
+
+    const anchor = findSubmitBtn() || input;
+    anchor.insertAdjacentElement('afterend', wrap);
+  }
+
   let _deleteCheckTimer = null;
   new MutationObserver(() => {
     clearTimeout(_deleteCheckTimer);
     _deleteCheckTimer = setTimeout(() => {
-      const existing = document.getElementById('gpt-autofill-wrap');
-      const input = findDeleteInput();
-      if (input && !existing) {
-        
-        injectDeleteRepoAutofill();
-      } else if (!input && existing) {
-        
-        existing.remove();
-      }
+      const existingDel = document.getElementById('gpt-autofill-wrap');
+      const delInput = findDeleteInput();
+      if (delInput && !existingDel) injectDeleteRepoAutofill();
+      else if (!delInput && existingDel) existingDel.remove();
+
+      const existingArch = document.getElementById('gpt-archive-wrap');
+      const archInput = findArchiveInput();
+      if (archInput && !existingArch) injectArchiveAutofill();
+      else if (!archInput && existingArch) existingArch.remove();
     }, 50);
   }).observe(document.body, { childList: true, subtree: true });
 
-  
-
-  
   let _lastUrl = location.href;
   let _reinjectTimer = null;
 
   function tryInjectAll() {
-    
+
     if (isRepoFilePage()) {
       if (!document.getElementById('gpt-btn-group')) {
         if (findAddFileButton()) {
           injectButtons();
         } else {
-          
+
           let t = 0;
           const iv = setInterval(() => {
             if (findAddFileButton()) { clearInterval(iv); injectButtons(); }
@@ -924,7 +1222,7 @@
           }, 150);
         }
       }
-    
+
     } else if (isFileBlobPage() || isFileEditPage()) {
       if (!document.getElementById('gpt-blob-wrapper')) {
         if (findMoreFileActionsButton()) {
@@ -947,14 +1245,14 @@
       clearTimeout(_reinjectTimer);
       _reinjectTimer = setTimeout(tryInjectAll, 400);
     } else {
-      
+
       clearTimeout(_reinjectTimer);
       _reinjectTimer = setTimeout(() => {
         if (isRepoFilePage() && !document.getElementById('gpt-btn-group')) {
           if (findAddFileButton()) {
             injectButtons();
           } else {
-            
+
             let t = 0;
             const iv = setInterval(() => {
               if (document.getElementById('gpt-btn-group')) { clearInterval(iv); return; }
@@ -979,5 +1277,123 @@
   }).observe(document.body, { childList: true, subtree: true });
 
   setTimeout(tryInjectAll, 600);
+
+  function isTokenNewPage() {
+    return /^\/settings\/tokens\/new/.test(location.pathname);
+  }
+
+  function injectTokenAutofill() {
+    if (document.getElementById('gpt-token-banner')) return;
+
+    const noteInput = document.querySelector('#oauth_access_description,input[name="oauth_access[description]"],#token_description,input[name="token[description]"]') ||
+      (() => {
+        for (const label of document.querySelectorAll('label')) {
+          if (/note/i.test(label.textContent)) {
+            const id = label.getAttribute('for');
+            return (id && document.getElementById(id)) || label.closest('div,dd')?.querySelector('input[type="text"]');
+          }
+        }
+        return null;
+      })();
+
+    if (!noteInput) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'gpt-token-banner';
+    banner.style.cssText = [
+      'display:flex','align-items:center','justify-content:space-between','flex-wrap:wrap','gap:10px',
+      'margin:0 0 18px','padding:12px 14px',
+      'background:rgba(88,166,255,.07)','border:1px solid rgba(88,166,255,.25)','border-radius:8px',
+      'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+    ].join(';');
+
+    const left = document.createElement('div');
+    left.style.cssText = 'display:flex;align-items:center;gap:10px;';
+    left.innerHTML =
+      '<svg viewBox="0 0 16 16" width="16" height="16" fill="#58a6ff"><path d="M10.5 0a5.499 5.499 0 1 1-1.288 10.848l-.932.932a.749.749 0 0 1-.53.22H7v.75a.749.749 0 0 1-.22.53l-.5.5a.749.749 0 0 1-.53.22H5v.75a.749.749 0 0 1-.22.53l-.5.5a.749.749 0 0 1-.53.22h-2a.749.749 0 0 1-.53-.22l-.5-.5a.749.749 0 0 1-.22-.53V13.25a.749.749 0 0 1 .22-.53l4.801-4.8A5.502 5.502 0 0 1 10.5 0Zm0 1.5a4 4 0 0 0-3.88 4.98.75.75 0 0 1-.188.718L1.61 12.02v.73l.25.25h1.19l.5-.5V11.75a.75.75 0 0 1 .75-.75h.75V10.25a.75.75 0 0 1 .75-.75h.879l.801-.8A.75.75 0 0 1 8 8.532a4 4 0 1 0 2.5-7.032Zm.5 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>' +
+      '<div><div style="font-size:13px;font-weight:600;color:#e6edf3">GitHub Unjank</div>' +
+      '<div style="font-size:11px;color:#8b949e;margin-top:1px">Auto-fill this form with the correct settings for file deletion</div></div>';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'gpt-token-autofill-btn';
+    btn.style.cssText = [
+      'display:inline-flex','align-items:center','gap:6px','padding:6px 14px',
+      'font-size:12px','font-weight:600','cursor:pointer','border-radius:6px','white-space:nowrap',
+      'background:rgba(88,166,255,.15)','border:1px solid rgba(88,166,255,.35)','color:#58a6ff',
+      'font-family:inherit','transition:background .12s,border-color .12s',
+    ].join(';');
+    btn.innerHTML =
+      '<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Z"/></svg>' +
+      'Auto-fill for Unjank';
+    btn.addEventListener('mouseenter', () => { btn.style.background='rgba(88,166,255,.25)'; btn.style.borderColor='rgba(88,166,255,.55)'; });
+    btn.addEventListener('mouseleave', () => { btn.style.background='rgba(88,166,255,.15)'; btn.style.borderColor='rgba(88,166,255,.35)'; });
+
+    banner.appendChild(left);
+    banner.appendChild(btn);
+
+    const form = noteInput.closest('form') || document.querySelector('form#new_personal_access_token,form#oauth_access_form');
+    const insertTarget = form ? form.firstElementChild : noteInput.closest('dl,div.form-group')?.parentElement;
+    if (insertTarget && insertTarget.parentElement) {
+      insertTarget.parentElement.insertBefore(banner, insertTarget);
+    } else if (noteInput.parentElement) {
+      noteInput.parentElement.insertBefore(banner, noteInput.parentElement.firstChild);
+    }
+
+    btn.addEventListener('click', () => {
+
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      setter.call(noteInput, 'GitHub Unjank — file deletion');
+      ['input','change'].forEach(ev => noteInput.dispatchEvent(new Event(ev, { bubbles: true })));
+
+      let repoChecked = false;
+      const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+      for (const cb of allCheckboxes) {
+        const id = (cb.id || '').toLowerCase();
+        const name = (cb.name || '').toLowerCase();
+        const val = (cb.value || '').toLowerCase();
+        const labelEl = cb.id ? document.querySelector('label[for="' + cb.id + '"]') : null;
+        const labelText = labelEl ? labelEl.textContent.trim().toLowerCase() : '';
+
+        if (val === 'repo' || id === 'repo' || name === 'repo' ||
+            (labelText === 'repo' && !val.includes(':'))) {
+          if (!cb.checked) {
+            cb.click();
+          }
+          repoChecked = true;
+          break;
+        }
+      }
+
+      if (!repoChecked) {
+        for (const label of document.querySelectorAll('label,strong,span')) {
+          if (label.textContent.trim() === 'repo') {
+            const cb = label.closest('div,li,dd')?.querySelector('input[type="checkbox"]') ||
+              document.getElementById(label.getAttribute?.('for') || '');
+            if (cb && !cb.checked) { cb.click(); repoChecked = true; break; }
+          }
+        }
+      }
+
+      btn.innerHTML =
+        '<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>' +
+        (repoChecked ? 'Filled! Click "Generate token" to finish' : 'Note filled (scroll down to check \'repo\')');
+      btn.style.background = 'rgba(63,185,80,.15)';
+      btn.style.borderColor = 'rgba(63,185,80,.35)';
+      btn.style.color = '#3fb950';
+      btn.disabled = true;
+
+      noteInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
+  if (isTokenNewPage()) {
+    let _tokenTries = 0;
+    const _tokenIv = setInterval(() => {
+      if (document.getElementById('gpt-token-banner')) { clearInterval(_tokenIv); return; }
+      injectTokenAutofill();
+      if (++_tokenTries > 40) clearInterval(_tokenIv);
+    }, 200);
+  }
 
 })();

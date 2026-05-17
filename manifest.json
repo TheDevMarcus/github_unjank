@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GitHub Unjank",
-  "version": "1.0.1",
+  "version": "1.0.6",
   "description": "Unjank GitHub: multi-file select & delete, bulk actions, file tools, and more.",
   "permissions": [
     "activeTab",

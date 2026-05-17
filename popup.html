@@ -51,6 +51,33 @@
     .footer { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
     .footer-left { font-size: 10px; color: var(--fg-dim); font-family: 'JetBrains Mono', monospace; }
     .version { font-size: 10px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--purple); background: rgba(188,140,255,.1); border: 1px solid rgba(188,140,255,.22); border-radius: 4px; padding: 2px 6px; }
+
+    /* API key settings */
+    .api-toggle-row { display: flex; align-items: center; justify-content: space-between; }
+    .api-toggle-label { display: flex; flex-direction: column; gap: 2px; }
+    .api-toggle-label span { font-size: 12px; font-weight: 600; color: var(--fg); }
+    .api-toggle-label small { font-size: 10px; color: var(--fg-muted); }
+    .toggle-switch { position: relative; width: 34px; height: 18px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track { position: absolute; inset: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 18px; cursor: pointer; transition: background .15s, border-color .15s; }
+    .toggle-track::after { content: ''; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; background: var(--fg-dim); border-radius: 50%; transition: transform .15s, background .15s; }
+    .toggle-switch input:checked + .toggle-track { background: rgba(63,185,80,.2); border-color: var(--green); }
+    .toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); background: var(--green); }
+    .api-key-wrap { margin-top: 9px; display: none; flex-direction: column; gap: 6px; }
+    .api-key-wrap.visible { display: flex; }
+    .api-key-input-row { display: flex; gap: 6px; align-items: center; }
+    .api-key-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--fg); outline: none; transition: border-color .12s; }
+    .api-key-input:focus { border-color: rgba(88,166,255,.5); }
+    .api-key-input::placeholder { color: var(--fg-dim); }
+    .api-key-save { padding: 5px 11px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; background: rgba(88,166,255,.12); border: 1px solid rgba(88,166,255,.25); color: var(--accent); border-radius: 6px; cursor: pointer; white-space: nowrap; transition: background .12s; }
+    .api-key-save:hover { background: rgba(88,166,255,.22); }
+    .api-key-hint { font-size: 10px; color: var(--fg-muted); line-height: 1.5; }
+    .api-key-hint a { color: var(--accent); text-decoration: none; }
+    .api-key-hint a:hover { text-decoration: underline; }
+    .api-key-status { font-size: 10px; font-family: 'JetBrains Mono', monospace; padding: 2px 0; }
+    .api-key-status.ok { color: var(--green); }
+    .api-key-status.warn { color: var(--yellow); }
+    .api-key-status.err { color: var(--red); }
   </style>
 </head>
 <body>
@@ -153,6 +180,39 @@
       <span class="tool-tag tag-file">settings</span>
     </div>
   </div>
+</div>
+
+<div class="section">
+  <div class="section-hd">
+    <svg viewBox="0 0 16 16" width="12" height="12"><path d="M10.5 0a5.499 5.499 0 1 1-1.288 10.848l-.932.932a.749.749 0 0 1-.53.22H7v.75a.749.749 0 0 1-.22.53l-.5.5a.749.749 0 0 1-.53.22H5v.75a.749.749 0 0 1-.22.53l-.5.5a.749.749 0 0 1-.53.22h-2a.749.749 0 0 1-.53-.22l-.5-.5a.749.749 0 0 1-.22-.53V13.25a.749.749 0 0 1 .22-.53l4.801-4.8A5.502 5.502 0 0 1 10.5 0Zm0 1.5a4 4 0 0 0-3.88 4.98.75.75 0 0 1-.188.718L1.61 12.02v.73l.25.25h1.19l.5-.5V11.75a.75.75 0 0 1 .75-.75h.75V10.25a.75.75 0 0 1 .75-.75h.879l.801-.8A.75.75 0 0 1 8 8.532a4 4 0 1 0 2.5-7.032Zm.5 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
+    <span>API Key (optional)</span>
+  </div>
+  <div class="api-toggle-row">
+    <div class="api-toggle-label">
+      <span>Use API key for deletions</span>
+      <small>Skip confirmation tabs — delete directly</small>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="api-mode-toggle">
+      <span class="toggle-track"></span>
+    </label>
+  </div>
+  <div class="api-key-wrap" id="api-key-wrap">
+    <div class="api-key-input-row">
+      <input type="password" class="api-key-input" id="api-key-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+      <button class="api-key-save" id="api-key-save">Save</button>
+    </div>
+    <div class="api-key-hint">
+      Needs <code>repo</code> or <code>public_repo</code> scope.
+      <a href="https://github.com/settings/tokens/new?scopes=repo&description=GitHub+Unjank+%E2%80%94+file+deletion" target="_blank" rel="noopener">Generate token ↗</a>
+    </div>
+    <div class="api-key-status" id="api-key-status"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <span class="footer-left">github.com/TheDevMarcus</span>
+  <span class="version">v1.0.5</span>
 </div>
 
 <script src="popup.js"></script>
